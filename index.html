@@ -1,7 +1,4 @@
-import os
-from pathlib import Path
-
-HTML = r'''<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="af">
 <head>
     <meta charset="UTF-8">
@@ -561,6 +558,21 @@ HTML = r'''<!DOCTYPE html>
             font-size: 0.87rem;
         }
 
+        .send-note {
+            color: var(--muted);
+            font-size: 0.78rem;
+            text-align: center;
+            margin-top: 18px;
+            margin-bottom: 4px;
+        }
+
+        #send-button:disabled {
+            opacity: 0.65;
+            cursor: default;
+            transform: none;
+            box-shadow: none;
+        }
+
         .small-note {
             color: #aaa29a;
             font-size: 0.68rem;
@@ -936,10 +948,14 @@ HTML = r'''<!DOCTYPE html>
                 </p>
             </div>
 
-            <button type="button" class="primary"
-                    style="margin-top: 22px;"
-                    onclick="acceptInvite()">
-                Klink goed ☕
+            <div class="send-note">
+                Druk die knoppie sodat die belangrike data by my uitkom. 💌
+            </div>
+
+            <div class="feedback" id="send-feedback" aria-live="polite"></div>
+
+            <button type="button" class="primary" id="send-button" onclick="sendAnswers()">
+                Klink goed, stuur my antwoorde ☕
             </button>
 
             <div class="small-note">
@@ -957,16 +973,24 @@ HTML = r'''<!DOCTYPE html>
      * GOOGLE MAPS API KEY
      * ============================================================
      *
-     * This value is injected at build time by main.py from the
-     * GOOGLE_MAPS_API_KEY environment variable (set it in Vercel).
-     *
-     * IMPORTANT:
-     * Restrict the key in Google Cloud Console to your website's
+     * Restrict this key in Google Cloud Console to your website's
      * domain (HTTP referrer restriction, e.g. *.vercel.app) before
      * putting the site online.
      */
-    const GOOGLE_MAPS_API_KEY = "__GOOGLE_MAPS_API_KEY__";
-    const GOOGLE_MAPS_MAP_ID = "__GOOGLE_MAPS_MAP_ID__";
+    const GOOGLE_MAPS_API_KEY = "AIzaSyBK6pkoVeUr9pAnwzCQkvjhTXAguoXqesc";
+    const GOOGLE_MAPS_MAP_ID = "DEMO_MAP_ID";
+
+    /*
+     * ============================================================
+     * WEB3FORMS ACCESS KEY (answer delivery)
+     * ============================================================
+     *
+     * 1. Go to https://web3forms.com and create a free access key
+     *    (you'll verify your email address).
+     * 2. Paste it below. Her answers will then be emailed to the
+     *    address you registered with Web3Forms.
+     */
+    const WEB3FORMS_ACCESS_KEY = "YOUR_WEB3FORMS_ACCESS_KEY";
 
     const answers = {
         afternoon: "",
@@ -1140,8 +1164,7 @@ HTML = r'''<!DOCTYPE html>
 
         if (!GOOGLE_MAPS_API_KEY) {
             showMapError(
-                "Voeg eers 'n Google Maps API key by " +
-                "(stel GOOGLE_MAPS_API_KEY in Vercel in)."
+                "Voeg eers 'n Google Maps API key by..."
             );
             console.warn("Google Maps API key not configured.");
             return;
@@ -1434,29 +1457,91 @@ HTML = r'''<!DOCTYPE html>
         showScreen("result");
     }
 
-    function acceptInvite() {
-        let message =
-            "Ek het die belangrike vrae beantwoord. 😌\n\n";
+    async function sendAnswers() {
+        const button = document.getElementById("send-button");
+        const feedback = document.getElementById("send-feedback");
 
-        if (answers.placeName) {
-            message += `Gekose plek: ${answers.placeName}\n`;
+        if (
+            !WEB3FORMS_ACCESS_KEY ||
+            WEB3FORMS_ACCESS_KEY === "YOUR_WEB3FORMS_ACCESS_KEY"
+        ) {
+            feedback.textContent =
+                "Oops – die e-poskonfigurasie is nog nie klaar nie. 😅";
+            return;
         }
 
-        message +=
-            `Datum: ${new Date(answers.date + "T12:00:00").toLocaleDateString("af-ZA", {
-                weekday: "long",
-                day: "numeric",
-                month: "long"
-            })}\n\n`;
+        button.disabled = true;
+        button.textContent = "Stuur...";
 
-        message +=
-            "Ek dink die wetenskap is redelik duidelik... koffie? ☕";
+        const formattedDate = new Date(
+            answers.date + "T12:00:00"
+        ).toLocaleDateString("af-ZA", {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+            year: "numeric"
+        });
 
-        const whatsappUrl =
-            "https://wa.me/?text=" +
-            encodeURIComponent(message);
+        const payload = {
+            access_key: WEB3FORMS_ACCESS_KEY,
+            subject: "☕ Koffie-eksperiment: haar antwoorde",
+            from_name: "Sy",
+            message: [
+                "NAVORSINGSRESULTATE ☕",
+                "",
+                `Ideale middag: ${answers.afternoon || "Nie gekies nie"}`,
+                `Belangrikste ding: ${answers.vibe || "Nie gekies nie"}`,
+                `Gunsteling plek: ${answers.placeName || "Nie gekies nie"}`,
+                `Adres: ${answers.placeAddress || "Nie gekies nie"}`,
+                `Hoekom: ${answers.reason || "Nie gekies nie"}`,
+                `Voorgestelde dag: ${formattedDate}`
+            ].join("\n"),
+            "Ideale middag": answers.afternoon || "Nie gekies nie",
+            "Belangrikste ding": answers.vibe || "Nie gekies nie",
+            "Gunsteling plek": answers.placeName || "Nie gekies nie",
+            "Adres": answers.placeAddress || "Nie gekies nie",
+            "Hoekom": answers.reason || "Nie gekies nie",
+            "Voorgestelde dag": formattedDate
+        };
 
-        window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+        if (answers.latitude !== null) {
+            payload["Koördinate"] =
+                `${answers.latitude}, ${answers.longitude}`;
+        }
+
+        try {
+            const response = await fetch(
+                "https://api.web3forms.com/submit",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
+                    },
+                    body: JSON.stringify(payload)
+                }
+            );
+
+            const result = await response.json();
+
+            if (result.success) {
+                feedback.textContent =
+                    "Perfek. Ek het jou antwoorde. Sien jou vir koffie. ☕";
+                button.disabled = true;
+                button.textContent = "Gestuur 💌";
+            } else {
+                feedback.textContent =
+                    "Iets het verkeerd gegaan. Probeer gerus weer. 😊";
+                button.disabled = false;
+                button.textContent = "Klink goed, stuur my antwoorde ☕";
+            }
+        } catch (error) {
+            console.error("Submit error:", error);
+            feedback.textContent =
+                "Iets het verkeerd gegaan. Probeer gerus weer. 😊";
+            button.disabled = false;
+            button.textContent = "Klink goed, stuur my antwoorde ☕";
+        }
     }
 
     function showMapError(message) {
@@ -1486,29 +1571,3 @@ HTML = r'''<!DOCTYPE html>
 
 </body>
 </html>
-'''
-
-out_dir = Path(__file__).resolve().parent / "dist"
-out_dir.mkdir(parents=True, exist_ok=True)
-
-GOOGLE_MAPS_API_KEY = os.environ.get("GOOGLE_MAPS_API_KEY", "").strip()
-GOOGLE_MAPS_MAP_ID = (
-    os.environ.get("GOOGLE_MAPS_MAP_ID", "").strip() or "DEMO_MAP_ID"
-)
-
-html = (
-    HTML
-    .replace("__GOOGLE_MAPS_API_KEY__", GOOGLE_MAPS_API_KEY)
-    .replace("__GOOGLE_MAPS_MAP_ID__", GOOGLE_MAPS_MAP_ID)
-)
-
-path = out_dir / "index.html"
-path.write_text(html, encoding="utf-8")
-
-print(f"Saved website to: {path}")
-print(f"File size: {path.stat().st_size:,} bytes")
-
-if not GOOGLE_MAPS_API_KEY:
-    print("WARNING: GOOGLE_MAPS_API_KEY is not set.")
-    print("The map will show a hint and the quiz can be continued without it.")
-    print("Set it in Vercel (Dashboard > Settings > Environment Variables).")
