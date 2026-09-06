@@ -1,0 +1,1514 @@
+import os
+from pathlib import Path
+
+HTML = r'''<!DOCTYPE html>
+<html lang="af">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>'n Paar Belangrike Vrae</title>
+
+    <style>
+        :root {
+            --bg: #f7f4ef;
+            --card: #fffdf9;
+            --text: #302c29;
+            --muted: #817972;
+            --border: #e7e0d7;
+            --accent: #9a7058;
+            --accent-dark: #76513e;
+            --accent-light: #f1e6dd;
+            --shadow: 0 25px 70px rgba(55, 43, 32, 0.12);
+            --radius: 22px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at 10% 10%, rgba(185, 151, 127, 0.14), transparent 35%),
+                radial-gradient(circle at 90% 90%, rgba(154, 112, 88, 0.08), transparent 35%),
+                var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 24px;
+        }
+
+        button, input {
+            font: inherit;
+        }
+
+        button {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :focus-visible {
+            outline: 3px solid rgba(154, 112, 88, 0.45);
+            outline-offset: 2px;
+        }
+
+        .app {
+            width: 100%;
+            max-width: 540px;
+        }
+
+        .progress-wrap {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .progress-track {
+            flex: 1;
+            height: 4px;
+            background: var(--border);
+            border-radius: 99px;
+            overflow: hidden;
+        }
+
+        .progress {
+            height: 100%;
+            width: 0%;
+            background: var(--accent);
+            border-radius: 99px;
+            transition: width 0.6s cubic-bezier(.4,0,.2,1);
+        }
+
+        .progress-number {
+            min-width: 35px;
+            color: var(--muted);
+            font-size: 0.72rem;
+            text-align: right;
+        }
+
+        .card {
+            position: relative;
+            min-height: 600px;
+            padding: 38px;
+            background: rgba(255, 253, 249, 0.96);
+            border: 1px solid rgba(231, 224, 215, 0.9);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: "";
+            position: absolute;
+            width: 220px;
+            height: 220px;
+            top: -120px;
+            right: -100px;
+            background: rgba(154, 112, 88, 0.07);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .screen {
+            display: none;
+            min-height: 524px;
+            flex-direction: column;
+            animation: screenIn 0.4s cubic-bezier(.2,.8,.2,1);
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        @keyframes screenIn {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .eyebrow {
+            color: var(--accent);
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 1.8px;
+            text-transform: uppercase;
+            margin-bottom: 13px;
+        }
+
+        h1, h2 {
+            font-family: Georgia, "Times New Roman", serif;
+            font-weight: 400;
+        }
+
+        h1 {
+            font-size: clamp(2rem, 7vw, 2.8rem);
+            line-height: 1.08;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            font-size: clamp(1.55rem, 5vw, 2rem);
+            line-height: 1.2;
+            margin-bottom: 15px;
+        }
+
+        p {
+            color: var(--muted);
+            font-size: 0.94rem;
+            line-height: 1.75;
+        }
+
+        .intro-copy {
+            max-width: 400px;
+            margin-bottom: 30px;
+        }
+
+        .intro-decoration {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 35px;
+        }
+
+        .intro-decoration span {
+            display: block;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .intro-decoration span:first-child {
+            width: 35px;
+        }
+
+        .intro-decoration span:last-child {
+            width: 70px;
+        }
+
+        .intro-decoration i {
+            width: 7px;
+            height: 7px;
+            background: var(--accent);
+            border-radius: 50%;
+        }
+
+        .primary {
+            width: 100%;
+            margin-top: auto;
+            padding: 15px 20px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 13px;
+            font-size: 0.92rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .primary:hover {
+            background: var(--accent-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(118, 81, 62, 0.18);
+        }
+
+        .primary:active {
+            transform: translateY(0);
+        }
+
+        .back {
+            align-self: center;
+            margin-top: 14px;
+            padding: 7px 10px;
+            color: var(--muted);
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 0.78rem;
+        }
+
+        .question-description {
+            margin-bottom: 23px;
+        }
+
+        .bring {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+
+        .bring-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 13px 12px;
+            background: #fdfbf8;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+        }
+
+        .bring-icon {
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            background: white;
+            border-radius: 10px;
+            font-size: 1.05rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .bring-text {
+            font-size: 0.84rem;
+            line-height: 1.35;
+        }
+
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .option {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px;
+            background: #fdfbf8;
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            text-align: left;
+            cursor: pointer;
+            transition: border 0.2s ease, background 0.2s ease, transform 0.2s ease;
+        }
+
+        .option:hover {
+            border-color: var(--accent);
+            background: var(--accent-light);
+            transform: translateX(3px);
+        }
+
+        .option-icon {
+            width: 42px;
+            height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            background: white;
+            border-radius: 11px;
+            font-size: 1.15rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .option-text {
+            font-size: 0.88rem;
+            line-height: 1.4;
+        }
+
+        .feedback {
+            min-height: 25px;
+            margin-top: 14px;
+            color: var(--accent);
+            font-size: 0.78rem;
+            text-align: center;
+        }
+
+        .map-screen {
+            min-height: 524px;
+        }
+
+        .map-intro {
+            margin-bottom: 16px;
+        }
+
+        .search-box {
+            margin-bottom: 10px;
+        }
+
+        #place-search {
+            width: 100%;
+        }
+
+        .map-container {
+            position: relative;
+            height: 275px;
+            margin-bottom: 12px;
+            border: 1px solid var(--border);
+            border-radius: 15px;
+            overflow: hidden;
+            background: #eee9e2;
+        }
+
+        #google-map {
+            width: 100%;
+            height: 100%;
+        }
+
+        .map-hint {
+            position: absolute;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            padding: 7px 12px;
+            background: rgba(255,255,255,0.94);
+            border-radius: 99px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            color: var(--muted);
+            font-size: 0.7rem;
+            pointer-events: none;
+        }
+
+        .location-selected {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            margin-bottom: 11px;
+            background: var(--accent-light);
+            border-radius: 11px;
+        }
+
+        .location-selected.visible {
+            display: flex;
+        }
+
+        .location-pin {
+            width: 31px;
+            height: 31px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            background: white;
+            border-radius: 50%;
+            font-size: 0.9rem;
+        }
+
+        .location-details {
+            min-width: 0;
+        }
+
+        .location-name {
+            font-size: 0.8rem;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .location-address {
+            color: var(--muted);
+            font-size: 0.68rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .reason-title {
+            color: var(--muted);
+            font-size: 0.76rem;
+            margin-bottom: 8px;
+        }
+
+        .reasons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .reason {
+            padding: 10px 8px;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            font-size: 0.76rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .reason:hover,
+        .reason.selected {
+            background: var(--accent-light);
+            border-color: var(--accent);
+            color: var(--accent-dark);
+        }
+
+        .map-skip {
+            align-self: center;
+            margin-top: 12px;
+            padding: 7px 10px;
+            color: var(--muted);
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid;
+            cursor: pointer;
+            font-size: 0.78rem;
+        }
+
+        .date-label {
+            display: block;
+            color: var(--muted);
+            font-size: 0.78rem;
+            margin-bottom: 8px;
+        }
+
+        input[type="date"] {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 15px;
+            background: #fdfbf8;
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="date"]:focus {
+            border-color: var(--accent);
+        }
+
+        .result-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .coffee-icon {
+            font-size: 2.8rem;
+            margin-bottom: 12px;
+            animation: floatCoffee 2.5s ease-in-out infinite;
+        }
+
+        @keyframes floatCoffee {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-5px);
+            }
+        }
+
+        .result-header h2 {
+            margin-bottom: 8px;
+        }
+
+        .result-card {
+            padding: 17px;
+            background: linear-gradient(135deg, #faf3ed, #f6e9df);
+            border: 1px solid #eadbd0;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 15px;
+            padding: 9px 0;
+            border-bottom: 1px solid rgba(130, 100, 80, 0.11);
+        }
+
+        .result-row:last-child {
+            border-bottom: none;
+        }
+
+        .result-label {
+            color: var(--muted);
+            font-size: 0.75rem;
+        }
+
+        .result-value {
+            max-width: 60%;
+            color: var(--text);
+            font-size: 0.77rem;
+            font-weight: 600;
+            text-align: right;
+        }
+
+        .final-conclusion {
+            text-align: center;
+            margin-top: auto;
+        }
+
+        .final-conclusion h2 {
+            font-size: 1.7rem;
+            margin-bottom: 7px;
+        }
+
+        .final-conclusion p {
+            font-size: 0.87rem;
+        }
+
+        .small-note {
+            color: #aaa29a;
+            font-size: 0.68rem;
+            text-align: center;
+            margin-top: 14px;
+        }
+
+        .error-message {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+            text-align: center;
+            color: var(--muted);
+            background: #f0ebe4;
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 560px) {
+            body {
+                padding: 12px;
+            }
+
+            .card {
+                padding: 27px 23px;
+                min-height: 590px;
+            }
+
+            .screen {
+                min-height: 536px;
+            }
+
+            .map-container {
+                height: 260px;
+            }
+
+            .map-hint {
+                font-size: 0.63rem;
+            }
+
+            .reasons {
+                gap: 7px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation: none !important;
+                transition: none !important;
+            }
+
+            html {
+                scroll-behavior: auto;
+            }
+        }
+    </style>
+</head>
+
+<body>
+<div class="app">
+
+    <div class="progress-wrap">
+        <div class="progress-track">
+            <div class="progress" id="progress"></div>
+        </div>
+        <div class="progress-number" id="progress-number">0%</div>
+    </div>
+
+    <main class="card">
+
+        <section class="screen active" id="intro">
+            <div class="intro-decoration">
+                <span></span>
+                <i></i>
+                <span></span>
+            </div>
+
+            <div class="eyebrow">'n Klein eksperiment</div>
+
+            <h1>Ek het 'n paar baie belangrike vrae.</h1>
+
+            <p class="intro-copy">
+                Ek het besluit om hierdie vrae eerder op
+                'n effens meer interessante manier te vra.
+                Ek belowe hulle is nie so ernstig soos hulle
+                klink nie. 😌
+            </p>
+
+            <button type="button" class="primary" onclick="showScreen('table')">
+                Kom ons begin →
+            </button>
+        </section>
+
+        <section class="screen" id="table">
+            <div class="eyebrow">Voor ons begin</div>
+
+            <h2>Wat ek na die tafel toe bring</h2>
+
+            <p class="question-description">
+                Net sodat jy weet waarmee jy werk. 😌
+            </p>
+
+            <div class="bring">
+                <div class="bring-item">
+                    <div class="bring-icon">🎩</div>
+                    <div class="bring-text">Goeie maniere</div>
+                </div>
+
+                <div class="bring-item">
+                    <div class="bring-icon">📷</div>
+                    <div class="bring-text">Ek is 'n fotograaf</div>
+                </div>
+
+                <div class="bring-item">
+                    <div class="bring-icon">💼</div>
+                    <div class="bring-text">Ek het 'n werk</div>
+                </div>
+
+                <div class="bring-item">
+                    <div class="bring-icon">🏙️</div>
+                    <div class="bring-text">Ek ken Pretoria goed</div>
+                </div>
+            </div>
+
+            <button type="button" class="primary" onclick="showScreen('q1')">
+                Goed om te weet →
+            </button>
+        </section>
+
+        <section class="screen" id="q1">
+            <div class="eyebrow">Vraag 01</div>
+
+            <h2>Kom ons begin maklik...</h2>
+
+            <p class="question-description">
+                Watter planeet het tans die meeste bevestigde mane?
+            </p>
+
+            <div class="options">
+                <button type="button" class="option" onclick="answerPlanet('Saturnus', true)">
+                    <div class="option-icon">🪐</div>
+                    <div class="option-text">Saturnus</div>
+                </button>
+
+                <button type="button" class="option" onclick="answerPlanet('Jupiter', false)">
+                    <div class="option-icon">🔴</div>
+                    <div class="option-text">Jupiter</div>
+                </button>
+
+                <button type="button" class="option" onclick="answerPlanet('Neptunus', false)">
+                    <div class="option-icon">🔵</div>
+                    <div class="option-text">Neptunus</div>
+                </button>
+            </div>
+
+            <div class="feedback" id="planet-feedback" aria-live="polite"></div>
+        </section>
+
+        <section class="screen" id="q2">
+            <div class="eyebrow">Vraag 02</div>
+
+            <h2>Jy kry skielik 'n hele middag vry.</h2>
+
+            <p class="question-description">
+                Wat klink vir jou die lekkerste?
+            </p>
+
+            <div class="options">
+                <button type="button" class="option"
+                        onclick="choose('afternoon', '’n Rustige koffie iewers knus', 'q3')">
+                    <div class="option-icon">☕</div>
+                    <div class="option-text">'n Rustige koffie iewers knus</div>
+                </button>
+
+                <button type="button" class="option"
+                        onclick="choose('afternoon', 'Iewers buite met ’n mooi uitsig', 'q3')">
+                    <div class="option-icon">🌿</div>
+                    <div class="option-text">Iewers buite met 'n mooi uitsig</div>
+                </button>
+
+                <button type="button" class="option"
+                        onclick="choose('afternoon', 'Koffie en iets lekker om te eet', 'q3')">
+                    <div class="option-icon">🥐</div>
+                    <div class="option-text">Koffie en iets lekker om te eet</div>
+                </button>
+
+                <button type="button" class="option"
+                        onclick="choose('afternoon', 'Iewers nuut wat jy nog nooit was nie', 'q3')">
+                    <div class="option-icon">✨</div>
+                    <div class="option-text">Iewers nuut wat jy nog nooit was nie</div>
+                </button>
+            </div>
+        </section>
+
+        <section class="screen" id="q3">
+            <div class="eyebrow">Vraag 03</div>
+
+            <h2>Wat maak 'n goeie koffie-afspraak?</h2>
+
+            <p class="question-description">
+                Kies die een wat die meeste na jou klink.
+            </p>
+
+            <div class="options">
+                <button type="button" class="option"
+                        onclick="choose('vibe', 'Baie lag', 'map')">
+                    <div class="option-icon">😂</div>
+                    <div class="option-text">Baie lag</div>
+                </button>
+
+                <button type="button" class="option"
+                        onclick="choose('vibe', '’n Regtig goeie gesprek', 'map')">
+                    <div class="option-icon">💬</div>
+                    <div class="option-text">'n Regtig goeie gesprek</div>
+                </button>
+
+                <button type="button" class="option"
+                        onclick="choose('vibe', '’n Lekker rustige atmosfeer', 'map')">
+                    <div class="option-icon">🌿</div>
+                    <div class="option-text">'n Lekker rustige atmosfeer</div>
+                </button>
+
+                <button type="button" class="option"
+                        onclick="choose('vibe', '’n Bietjie van alles', 'map')">
+                    <div class="option-icon">✨</div>
+                    <div class="option-text">'n Bietjie van alles</div>
+                </button>
+            </div>
+        </section>
+
+        <section class="screen map-screen" id="map">
+            <div class="eyebrow">Nou 'n belangrike vraag</div>
+
+            <h2>Waar is jou gunsteling plek?</h2>
+
+            <p class="map-intro">
+                Dit kan 'n koffiewinkel, restaurant, park,
+                strand, uitsigpunt of sommer enige plek wees
+                waarvan jy baie hou.
+            </p>
+
+            <div class="search-box">
+                <gmp-place-autocomplete id="place-search" placeholder="Soek 'n plek..."></gmp-place-autocomplete>
+            </div>
+
+            <div class="map-container">
+                <div id="google-map"></div>
+
+                <div class="map-hint">
+                    Of tik enige plek op die kaart 📍
+                </div>
+            </div>
+
+            <div class="location-selected" id="location-selected">
+                <div class="location-pin">📍</div>
+
+                <div class="location-details">
+                    <div class="location-name" id="location-name">
+                        Gekose plek
+                    </div>
+
+                    <div class="location-address" id="location-address"></div>
+                </div>
+            </div>
+
+            <div class="reason-title">
+                Hoekom hou jy van hierdie plek?
+            </div>
+
+            <div class="reasons">
+                <button type="button" class="reason"
+                        onclick="selectReason(this, 'Dit is mooi')">
+                    🌅 Dit is mooi
+                </button>
+
+                <button type="button" class="reason"
+                        onclick="selectReason(this, 'Dit het goeie herinneringe')">
+                    ❤️ Goeie herinneringe
+                </button>
+
+                <button type="button" class="reason"
+                        onclick="selectReason(this, 'Die kos of koffie')">
+                    ☕ Kos / koffie
+                </button>
+
+                <button type="button" class="reason"
+                        onclick="selectReason(this, 'Dit is rustig')">
+                    🌿 Dit is rustig
+                </button>
+            </div>
+
+            <div class="feedback" id="map-feedback" aria-live="polite"></div>
+
+            <button type="button" class="primary" onclick="continueFromMap()">
+                Ek hou van hierdie antwoord →
+            </button>
+
+            <button type="button" class="map-skip" id="map-skip" hidden
+                    onclick="skipMap()">
+                Gaan voort sonder die kaart →
+            </button>
+        </section>
+
+        <section class="screen" id="date">
+            <div class="eyebrow">Net een laaste ding</div>
+
+            <h2>Wanneer moet ons die eksperiment uitvoer?</h2>
+
+            <p style="margin-bottom: 28px;">
+                Kies 'n dag wanneer ons albei tyd het.
+                Ek dink die resultate gaan interessant wees. ☕
+            </p>
+
+            <label class="date-label" for="date-picker">
+                Kies 'n datum
+            </label>
+
+            <input type="date" id="date-picker">
+
+            <div class="feedback" id="date-feedback" aria-live="polite"></div>
+
+            <button type="button" class="primary" onclick="generateResult()">
+                Wys my die resultate →
+            </button>
+        </section>
+
+        <section class="screen" id="result">
+            <div class="result-header">
+                <div class="coffee-icon">☕</div>
+
+                <div class="eyebrow">Die resultate</div>
+
+                <h2>Ek dink ons het 'n antwoord.</h2>
+
+                <p>
+                    Na deeglike, hoogs wetenskaplike ontleding...
+                </p>
+            </div>
+
+            <div class="result-card">
+                <div class="result-row">
+                    <span class="result-label">Ideale middag</span>
+                    <span class="result-value" id="result-afternoon"></span>
+                </div>
+
+                <div class="result-row">
+                    <span class="result-label">Die belangrikste ding</span>
+                    <span class="result-value" id="result-vibe"></span>
+                </div>
+
+                <div class="result-row">
+                    <span class="result-label">Gunsteling plek</span>
+                    <span class="result-value" id="result-place"></span>
+                </div>
+
+                <div class="result-row">
+                    <span class="result-label">Hoekom</span>
+                    <span class="result-value" id="result-reason"></span>
+                </div>
+
+                <div class="result-row">
+                    <span class="result-label">Voorgestelde dag</span>
+                    <span class="result-value" id="result-date"></span>
+                </div>
+            </div>
+
+            <div class="final-conclusion">
+                <h2>So...</h2>
+
+                <p>
+                    Ek dink ons moet koffie gaan drink. ☕
+                </p>
+            </div>
+
+            <button type="button" class="primary"
+                    style="margin-top: 22px;"
+                    onclick="acceptInvite()">
+                Klink goed ☕
+            </button>
+
+            <div class="small-note">
+                Wetenskaplike gevolgtrekking:
+                uiters belowend.
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<script>
+    /*
+     * ============================================================
+     * GOOGLE MAPS API KEY
+     * ============================================================
+     *
+     * This value is injected at build time by main.py from the
+     * GOOGLE_MAPS_API_KEY environment variable (set it in Vercel).
+     *
+     * IMPORTANT:
+     * Restrict the key in Google Cloud Console to your website's
+     * domain (HTTP referrer restriction, e.g. *.vercel.app) before
+     * putting the site online.
+     */
+    const GOOGLE_MAPS_API_KEY = "__GOOGLE_MAPS_API_KEY__";
+    const GOOGLE_MAPS_MAP_ID = "__GOOGLE_MAPS_MAP_ID__";
+
+    const answers = {
+        afternoon: "",
+        vibe: "",
+        placeName: "",
+        placeAddress: "",
+        latitude: null,
+        longitude: null,
+        reason: "",
+        date: "",
+        mapSkipped: false
+    };
+
+    const progressValues = {
+        intro: 0,
+        table: 10,
+        q1: 20,
+        q2: 40,
+        q3: 60,
+        map: 75,
+        date: 90,
+        result: 100
+    };
+
+    function setFeedback(id, message) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = message;
+        }
+    }
+
+    function updateProgress(screenId) {
+        const value = progressValues[screenId] ?? 0;
+
+        document.getElementById("progress").style.width = value + "%";
+        document.getElementById("progress-number").textContent = value + "%";
+    }
+
+    function showScreen(id) {
+        document.querySelectorAll(".screen").forEach(screen => {
+            screen.classList.remove("active");
+        });
+
+        const screen = document.getElementById(id);
+
+        if (!screen) {
+            console.error(`Screen "${id}" does not exist.`);
+            return;
+        }
+
+        screen.classList.add("active");
+        updateProgress(id);
+
+        if (id === "map" && !window.mapInitialised) {
+            initialiseGoogleMap();
+        }
+    }
+
+    function answerPlanet(answer, correct) {
+        const feedback = document.getElementById("planet-feedback");
+
+        if (correct) {
+            feedback.textContent = "Korrek! Jy begin goed. ✓";
+        } else {
+            feedback.textContent =
+                "Interessante antwoord... ek sal dit aanvaar. 😌";
+        }
+
+        setTimeout(() => {
+            showScreen("q2");
+        }, 650);
+    }
+
+    function choose(key, value, next) {
+        answers[key] = value;
+        showScreen(next);
+    }
+
+    function selectReason(button, reason) {
+        document.querySelectorAll(".reason").forEach(item => {
+            item.classList.remove("selected");
+        });
+
+        button.classList.add("selected");
+        answers.reason = reason;
+        setFeedback("map-feedback", "");
+    }
+
+    let googleMap = null;
+    let selectedMarker = null;
+    let geocoder = null;
+    let mapInitInProgress = false;
+
+    window.mapInitialised = false;
+
+    function waitForGoogleMaps(timeoutMs = 15000) {
+        return new Promise((resolve, reject) => {
+            const started = Date.now();
+
+            const check = () => {
+                if (
+                    window.google &&
+                    google.maps &&
+                    typeof google.maps.importLibrary === "function"
+                ) {
+                    resolve();
+                    return;
+                }
+
+                if (Date.now() - started > timeoutMs) {
+                    reject(new Error("Google Maps load timed out."));
+                    return;
+                }
+
+                setTimeout(check, 100);
+            };
+
+            check();
+        });
+    }
+
+    function loadGoogleMaps() {
+        if (!GOOGLE_MAPS_API_KEY) {
+            return Promise.resolve(false);
+        }
+
+        const existing = document.querySelector(
+            'script[data-google-maps-loader="true"]'
+        );
+
+        if (existing) {
+            return waitForGoogleMaps()
+                .then(() => true)
+                .catch(() => false);
+        }
+
+        return new Promise(resolve => {
+            const script = document.createElement("script");
+
+            script.dataset.googleMapsLoader = "true";
+
+            script.src =
+                "https://maps.googleapis.com/maps/api/js" +
+                "?key=" +
+                encodeURIComponent(GOOGLE_MAPS_API_KEY) +
+                "&v=weekly";
+
+            script.async = true;
+
+            script.onload = () => {
+                waitForGoogleMaps()
+                    .then(() => resolve(true))
+                    .catch(() => resolve(false));
+            };
+
+            script.onerror = () => {
+                console.error("Google Maps could not load.");
+                resolve(false);
+            };
+
+            document.head.appendChild(script);
+        });
+    }
+
+    async function initialiseGoogleMap() {
+        if (window.mapInitialised || mapInitInProgress) {
+            return;
+        }
+
+        mapInitInProgress = true;
+
+        if (!GOOGLE_MAPS_API_KEY) {
+            showMapError(
+                "Voeg eers 'n Google Maps API key by " +
+                "(stel GOOGLE_MAPS_API_KEY in Vercel in)."
+            );
+            console.warn("Google Maps API key not configured.");
+            return;
+        }
+
+        const loaded = await loadGoogleMaps();
+
+        if (!loaded) {
+            showMapError(
+                "Google Maps kon nie gelaai word nie. " +
+                "Kontroleer jou API key en domein-beperkings."
+            );
+            return;
+        }
+
+        try {
+            const { Map } = await google.maps.importLibrary("maps");
+
+            await google.maps.importLibrary("places");
+
+            const { AdvancedMarkerElement } =
+                await google.maps.importLibrary("marker");
+
+            const { Geocoder } =
+                await google.maps.importLibrary("geocoding");
+
+            geocoder = new Geocoder();
+
+            googleMap = new Map(document.getElementById("google-map"), {
+                center: {
+                    lat: -30.5595,
+                    lng: 22.9375
+                },
+                zoom: 5,
+                mapId: GOOGLE_MAPS_MAP_ID,
+                mapTypeControl: false,
+                streetViewControl: false,
+                fullscreenControl: false,
+                clickableIcons: true
+            });
+
+            googleMap.addListener("click", event => {
+                if (!event.latLng) return;
+
+                placeMarker(
+                    event.latLng.lat(),
+                    event.latLng.lng()
+                );
+            });
+
+            const search = document.getElementById("place-search");
+
+            search.addEventListener("gmp-select", async event => {
+                try {
+                    const prediction = event.placePrediction;
+
+                    if (!prediction) return;
+
+                    const place = prediction.toPlace();
+
+                    await place.fetchFields({
+                        fields: [
+                            "displayName",
+                            "formattedAddress",
+                            "location",
+                            "viewport"
+                        ]
+                    });
+
+                    if (!place.location) return;
+
+                    if (place.viewport) {
+                        googleMap.fitBounds(place.viewport);
+                    } else {
+                        googleMap.setCenter(place.location);
+                        googleMap.setZoom(16);
+                    }
+
+                    placeMarker(
+                        place.location.lat(),
+                        place.location.lng(),
+                        place.displayName,
+                        place.formattedAddress
+                    );
+                } catch (error) {
+                    console.error("Place search error:", error);
+                }
+            });
+
+            window.mapInitialised = true;
+
+        } catch (error) {
+            console.error("Google Maps initialisation error:", error);
+
+            showMapError(
+                "Die kaart kon nie gelaai word nie. " +
+                "Kontroleer jou Google Maps API-instellings."
+            );
+        }
+    }
+
+    async function placeMarker(
+        latitude,
+        longitude,
+        name = null,
+        address = null
+    ) {
+        if (!googleMap || !window.google) {
+            return;
+        }
+
+        const { AdvancedMarkerElement } =
+            await google.maps.importLibrary("marker");
+
+        if (selectedMarker) {
+            selectedMarker.map = null;
+        }
+
+        selectedMarker = new AdvancedMarkerElement({
+            map: googleMap,
+            position: {
+                lat: latitude,
+                lng: longitude
+            },
+            gmpDraggable: true
+        });
+
+        answers.latitude = latitude;
+        answers.longitude = longitude;
+        answers.mapSkipped = false;
+
+        if (!name && geocoder) {
+            try {
+                const result = await geocoder.geocode({
+                    location: {
+                        lat: latitude,
+                        lng: longitude
+                    }
+                });
+
+                if (result.results?.length) {
+                    name = "Gekose plek";
+                    address = result.results[0].formatted_address;
+                }
+            } catch (error) {
+                console.warn("Reverse geocoding failed:", error);
+            }
+        }
+
+        answers.placeName = name || "Gekose plek";
+        answers.placeAddress =
+            address ||
+            `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+
+        updateSelectedPlace();
+
+        selectedMarker.addListener("dragend", async event => {
+            const position = selectedMarker.position;
+
+            if (!position) return;
+
+            const newLat =
+                typeof position.lat === "function"
+                    ? position.lat()
+                    : position.lat;
+
+            const newLng =
+                typeof position.lng === "function"
+                    ? position.lng()
+                    : position.lng;
+
+            answers.latitude = newLat;
+            answers.longitude = newLng;
+
+            if (geocoder) {
+                try {
+                    const result = await geocoder.geocode({
+                        location: {
+                            lat: newLat,
+                            lng: newLng
+                        }
+                    });
+
+                    if (result.results?.length) {
+                        answers.placeAddress =
+                            result.results[0].formatted_address;
+                    }
+                } catch (error) {
+                    console.warn("Reverse geocoding failed:", error);
+                }
+            }
+
+            updateSelectedPlace();
+        });
+    }
+
+    function updateSelectedPlace() {
+        document
+            .getElementById("location-selected")
+            .classList.add("visible");
+
+        document.getElementById("location-name").textContent =
+            answers.placeName;
+
+        document.getElementById("location-address").textContent =
+            answers.placeAddress;
+    }
+
+    function continueFromMap() {
+        if (!answers.mapSkipped && answers.latitude === null) {
+            setFeedback(
+                "map-feedback",
+                "Kies eers 'n plek op die kaart, of gaan voort sonder 'n plek. 😊"
+            );
+            return;
+        }
+
+        if (!answers.mapSkipped && !answers.reason) {
+            setFeedback(
+                "map-feedback",
+                "Vertel my eers hoekom jy van die plek hou 😊"
+            );
+            return;
+        }
+
+        showScreen("date");
+    }
+
+    function skipMap() {
+        answers.mapSkipped = true;
+        answers.placeName = "";
+        answers.placeAddress = "";
+        answers.reason = "";
+        setFeedback("map-feedback", "");
+        showScreen("date");
+    }
+
+    const datePicker = document.getElementById("date-picker");
+
+    function formatDateInput(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+
+        return `${year}-${month}-${day}`;
+    }
+
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    datePicker.min = formatDateInput(tomorrow);
+    datePicker.value = formatDateInput(tomorrow);
+
+    function generateResult() {
+        const date = datePicker.value;
+
+        if (!date) {
+            setFeedback("date-feedback", "Kies asseblief 'n datum 😊");
+            return;
+        }
+
+        setFeedback("date-feedback", "");
+
+        answers.date = date;
+
+        const formattedDate = new Date(
+            date + "T12:00:00"
+        ).toLocaleDateString("af-ZA", {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+            year: "numeric"
+        });
+
+        document.getElementById("result-afternoon").textContent =
+            answers.afternoon || "Nie gekies nie";
+
+        document.getElementById("result-vibe").textContent =
+            answers.vibe || "Nie gekies nie";
+
+        document.getElementById("result-place").textContent =
+            answers.placeName || "Nie gekies nie";
+
+        document.getElementById("result-reason").textContent =
+            answers.reason || "Nie gekies nie";
+
+        document.getElementById("result-date").textContent =
+            formattedDate;
+
+        showScreen("result");
+    }
+
+    function acceptInvite() {
+        let message =
+            "Ek het die belangrike vrae beantwoord. 😌\n\n";
+
+        if (answers.placeName) {
+            message += `Gekose plek: ${answers.placeName}\n`;
+        }
+
+        message +=
+            `Datum: ${new Date(answers.date + "T12:00:00").toLocaleDateString("af-ZA", {
+                weekday: "long",
+                day: "numeric",
+                month: "long"
+            })}\n\n`;
+
+        message +=
+            "Ek dink die wetenskap is redelik duidelik... koffie? ☕";
+
+        const whatsappUrl =
+            "https://wa.me/?text=" +
+            encodeURIComponent(message);
+
+        window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+    }
+
+    function showMapError(message) {
+        document.getElementById("google-map").innerHTML = `
+            <div class="error-message">
+                ${escapeHtml(message)}
+            </div>
+        `;
+
+        document.getElementById("map-skip").hidden = false;
+    }
+
+    function escapeHtml(value) {
+        return String(value)
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+    }
+
+    updateProgress("intro");
+    if (GOOGLE_MAPS_API_KEY) {
+        loadGoogleMaps();
+    }
+</script>
+
+</body>
+</html>
+'''
+
+out_dir = Path(__file__).resolve().parent / "dist"
+out_dir.mkdir(parents=True, exist_ok=True)
+
+GOOGLE_MAPS_API_KEY = os.environ.get("GOOGLE_MAPS_API_KEY", "").strip()
+GOOGLE_MAPS_MAP_ID = (
+    os.environ.get("GOOGLE_MAPS_MAP_ID", "").strip() or "DEMO_MAP_ID"
+)
+
+html = (
+    HTML
+    .replace("__GOOGLE_MAPS_API_KEY__", GOOGLE_MAPS_API_KEY)
+    .replace("__GOOGLE_MAPS_MAP_ID__", GOOGLE_MAPS_MAP_ID)
+)
+
+path = out_dir / "index.html"
+path.write_text(html, encoding="utf-8")
+
+print(f"Saved website to: {path}")
+print(f"File size: {path.stat().st_size:,} bytes")
+
+if not GOOGLE_MAPS_API_KEY:
+    print("WARNING: GOOGLE_MAPS_API_KEY is not set.")
+    print("The map will show a hint and the quiz can be continued without it.")
+    print("Set it in Vercel (Dashboard > Settings > Environment Variables).")
